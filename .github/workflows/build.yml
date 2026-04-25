@@ -10,10 +10,7 @@ jobs:
         uses: Randomblock1/theos-action@v1
       - name: Force Create Files and Build
         run: |
-          # 1. CLEANUP (Fixes the "Not a directory" error)
           rm -rf debs packages .theos obj
-          
-          # 2. Create the Makefile
           echo "TARGET := iphone:clang:latest:14.0" > Makefile
           echo "INSTALL_TARGET_PROCESSES = SpringBoard" >> Makefile
           echo "include \$(THEOS)/makefiles/common.mk" >> Makefile
@@ -21,8 +18,6 @@ jobs:
           echo "67mod_FILES = Tweak.x" >> Makefile
           echo "67mod_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-error" >> Makefile
           echo "include \$(THEOS_MAKE_PATH)/tweak.mk" >> Makefile
-
-          # 3. Create the Control file
           echo "Package: com.notjosh.67mod" > control
           echo "Name: 67 Mod" >> control
           echo "Version: 1.0" >> control
@@ -30,11 +25,7 @@ jobs:
           echo "Maintainer: NotJosh" >> control
           echo "Author: NotJosh" >> control
           echo "Description: Falling 67s" >> control
-
-          # 4. Create the Filter Plist
           echo '{ Filter = { Bundles = ( "com.apple.springboard" ); }; }' > 67mod.plist
-
-          # 5. Create the Tweak code
           echo '#import <UIKit/UIKit.h>' > Tweak.x
           echo '%hook SpringBoard' >> Tweak.x
           echo '- (void)applicationDidFinishLaunching:(id)application {' >> Tweak.x
@@ -58,8 +49,6 @@ jobs:
           echo '    }];' >> Tweak.x
           echo '}' >> Tweak.x
           echo '%end' >> Tweak.x
-
-          # 6. Build it
           export THEOS_DEVICE_IP=localhost
           make package FINALPACKAGE=1
 
@@ -67,6 +56,8 @@ jobs:
         run: |
           mkdir -p debs
           cp packages/*.deb debs/67mod.deb
+          # This part was the error - fixed now:
+          rm -rf Packages
           echo "Package: com.notjosh.67mod" > Packages
           echo "Name: 67 Mod" >> Packages
           echo "Version: 1.0" >> Packages
@@ -76,5 +67,5 @@ jobs:
           git config --global user.name "NotJoshxops"
           git config --global user.email "notjoshxops@github.com"
           git add .
-          git commit -m "Final build cleanup" || echo "Done"
+          git commit -m "Victory Build" || echo "Done"
           git push
