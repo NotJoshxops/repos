@@ -10,7 +10,7 @@ jobs:
         uses: Randomblock1/theos-action@v1
       - name: Force Create Files and Build
         run: |
-          # 1. Create the Makefile (Added Wno-error to skip the crash)
+          # 1. Create the Makefile
           echo "TARGET := iphone:clang:latest:14.0" > Makefile
           echo "INSTALL_TARGET_PROCESSES = SpringBoard" >> Makefile
           echo "include \$(THEOS)/makefiles/common.mk" >> Makefile
@@ -28,7 +28,10 @@ jobs:
           echo "Author: NotJosh" >> control
           echo "Description: Falling 67s" >> control
 
-          # 3. Create the Tweak code (Fixed for iOS 13+)
+          # 3. Create the Filter Plist (THE MISSING PIECE)
+          echo '{ Filter = { Bundles = ( "com.apple.springboard" ); }; }' > 67mod.plist
+
+          # 4. Create the Tweak code
           echo '#import <UIKit/UIKit.h>' > Tweak.x
           echo '%hook SpringBoard' >> Tweak.x
           echo '- (void)applicationDidFinishLaunching:(id)application {' >> Tweak.x
@@ -53,7 +56,7 @@ jobs:
           echo '}' >> Tweak.x
           echo '%end' >> Tweak.x
 
-          # 4. Build it
+          # 5. Build it
           export THEOS_DEVICE_IP=localhost
           make package FINALPACKAGE=1
 
@@ -70,5 +73,5 @@ jobs:
           git config --global user.name "NotJoshxops"
           git config --global user.email "notjoshxops@github.com"
           git add .
-          git commit -m "Fix iOS 13+ build error" || echo "Done"
+          git commit -m "Add plist and build" || echo "Done"
           git push
