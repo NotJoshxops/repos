@@ -1,0 +1,9 @@
+Package: com.notjosh.67mod
+Name: 67 Mod
+Depends: mobilesubstrate
+Version: 1.0
+Architecture: iphoneos-arm64
+Description: Falling 67s on your screen.
+Maintainer: NotJosh
+Author: NotJosh
+Section: Tweaks
