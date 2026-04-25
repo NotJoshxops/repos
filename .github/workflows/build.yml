@@ -56,7 +56,6 @@ jobs:
         run: |
           mkdir -p debs
           cp packages/*.deb debs/67mod.deb
-          # This part was the error - fixed now:
           rm -rf Packages
           echo "Package: com.notjosh.67mod" > Packages
           echo "Name: 67 Mod" >> Packages
@@ -66,6 +65,8 @@ jobs:
           echo "Description: Falling 67s" >> Packages
           git config --global user.name "NotJoshxops"
           git config --global user.email "notjoshxops@github.com"
-          git add .
-          git commit -m "Victory Build" || echo "Done"
+          
+          # ONLY add the specific files we need so it doesn't crash
+          git add debs/67mod.deb Packages Makefile control Tweak.x 67mod.plist
+          git commit -m "IT FINALLY WORKED" || echo "Done"
           git push
