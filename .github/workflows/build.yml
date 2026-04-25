@@ -1,43 +1,63 @@
 name: Build Tweak
-on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
-
+on: [workflow_dispatch, push]
 jobs:
   build:
     runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
       - name: Setup Theos
         uses: Randomblock1/theos-action@v1
-
-      - name: Build Tweak
+      - name: Force Create Files and Build
         run: |
+          # 1. Create the Makefile manually
+          echo "TARGET := iphone:clang:latest:14.0" > Makefile
+          echo "INSTALL_TARGET_PROCESSES = SpringBoard" >> Makefile
+          echo "include \$(THEOS)/makefiles/common.mk" >> Makefile
+          echo "TWEAK_NAME = 67mod" >> Makefile
+          echo "67mod_FILES = Tweak.x" >> Makefile
+          echo "67mod_CFLAGS = -fobjc-arc" >> Makefile
+          echo "include \$(THEOS_MAKE_PATH)/tweak.mk" >> Makefile
+
+          # 2. Create the Control file manually
+          echo "Package: com.notjosh.67mod" > control
+          echo "Name: 67 Mod" >> control
+          echo "Version: 1.0" >> control
+          echo "Architecture: iphoneos-arm64" >> control
+          echo "Maintainer: NotJosh" >> control
+          echo "Author: NotJosh" >> control
+          echo "Description: Falling 67s" >> control
+
+          # 3. Create the Tweak code manually
+          echo '#import <UIKit/UIKit.h>' > Tweak.x
+          echo '%hook SpringBoard' >> Tweak.x
+          echo '- (void)applicationDidFinishLaunching:(id)application {' >> Tweak.x
+          echo '    %orig;' >> Tweak.x
+          echo '    [NSTimer scheduledTimerWithTimeInterval:2.0 repeats:YES block:^(NSTimer *t) {' >> Tweak.x
+          echo '        dispatch_async(dispatch_get_main_queue(), ^{' >> Tweak.x
+          echo '            UILabel *l = [[UILabel alloc] initWithFrame:CGRectMake(arc4random_uniform(300), -50, 60, 60)];' >> Tweak.x
+          echo '            l.text = @"67"; l.font = [UIFont boldSystemFontOfSize:40]; l.textColor = [UIColor redColor];' >> Tweak.x
+          echo '            [[UIApplication sharedApplication].keyWindow addSubview:l];' >> Tweak.x
+          echo '            [UIView animateWithDuration:5.0 animations:^{ l.frame = CGRectMake(l.frame.origin.x, 1000, 60, 60); } completion:^(BOOL f) { [l removeFromSuperview]; }];' >> Tweak.x
+          echo '        });' >> Tweak.x
+          echo '    }];' >> Tweak.x
+          echo '}' >> Tweak.x
+          echo '%end' >> Tweak.x
+
+          # 4. Build the damn thing
           export THEOS_DEVICE_IP=localhost
           make package FINALPACKAGE=1
-        
-      - name: Move to Repo
-        run: |
-          mkdir -p debs
-          mv packages/*.deb debs/67mod.deb
-
-      - name: Update Packages
-        run: |
-          echo "Package: com.notjosh.67mod" > Packages
-          echo "Name: 67 Mod" >> Packages
-          echo "Version: 1.0" >> Packages
-          echo "Architecture: iphoneos-arm64" >> Packages
-          echo "Description: Falling 67s" >> Packages
-          echo "Filename: debs/67mod.deb" >> Packages
 
       - name: Push to Repo
         run: |
+          mkdir -p debs
+          mv packages/*.deb debs/67mod.deb
+          echo "Package: com.notjosh.67mod" > Packages
+          echo "Name: 67 Mod" >> Packages
+          echo "Version: 1.0" >> Packages
+          echo "Filename: debs/67mod.deb" >> Packages
           git config --global user.name "NotJoshxops"
           git config --global user.email "notjoshxops@github.com"
           git add .
-          git commit -m "Auto-build tweak" || echo "No changes to commit"
+          git commit -m "Force build" || echo "Done"
           git push
