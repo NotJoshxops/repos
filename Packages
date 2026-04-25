@@ -1,0 +1,6 @@
+Package: com.notjosh.67mod
+Name: 67 Mod
+Version: 1.0
+Architecture: iphoneos-arm64
+Filename: debs/67mod.deb
+Description: Falling 67s
