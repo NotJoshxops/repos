@@ -1,17 +1,43 @@
+name: Build Tweak
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Theos
+        uses: Randomblock1/theos-action@v1
+
       - name: Build Tweak
         run: |
-          # This forces the files to exist so 'make' doesn't fail
-          echo "TARGET := iphone:clang:latest:14.0" > Makefile
-          echo "include \$(THEOS)/makefiles/common.mk" >> Makefile
-          echo "TWEAK_NAME = 67mod" >> Makefile
-          echo "67mod_FILES = Tweak.x" >> Makefile
-          echo "67mod_CFLAGS = -fobjc-arc" >> Makefile
-          echo "include \$(THEOS_MAKE_PATH)/tweak.mk" >> Makefile
-          
-          echo "Package: com.notjosh.67mod" > control
-          echo "Name: 67 Mod" >> control
-          echo "Version: 1.0" >> control
-          echo "Architecture: iphoneos-arm64" >> control
-          
           export THEOS_DEVICE_IP=localhost
           make package FINALPACKAGE=1
+        
+      - name: Move to Repo
+        run: |
+          mkdir -p debs
+          mv packages/*.deb debs/67mod.deb
+
+      - name: Update Packages
+        run: |
+          echo "Package: com.notjosh.67mod" > Packages
+          echo "Name: 67 Mod" >> Packages
+          echo "Version: 1.0" >> Packages
+          echo "Architecture: iphoneos-arm64" >> Packages
+          echo "Description: Falling 67s" >> Packages
+          echo "Filename: debs/67mod.deb" >> Packages
+
+      - name: Push to Repo
+        run: |
+          git config --global user.name "NotJoshxops"
+          git config --global user.email "notjoshxops@github.com"
+          git add .
+          git commit -m "Auto-build tweak" || echo "No changes to commit"
+          git push
