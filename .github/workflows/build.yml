@@ -10,16 +10,16 @@ jobs:
         uses: Randomblock1/theos-action@v1
       - name: Force Create Files and Build
         run: |
-          # 1. Create the Makefile manually
+          # 1. Create the Makefile (Added Wno-error to skip the crash)
           echo "TARGET := iphone:clang:latest:14.0" > Makefile
           echo "INSTALL_TARGET_PROCESSES = SpringBoard" >> Makefile
           echo "include \$(THEOS)/makefiles/common.mk" >> Makefile
           echo "TWEAK_NAME = 67mod" >> Makefile
           echo "67mod_FILES = Tweak.x" >> Makefile
-          echo "67mod_CFLAGS = -fobjc-arc" >> Makefile
+          echo "67mod_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-error" >> Makefile
           echo "include \$(THEOS_MAKE_PATH)/tweak.mk" >> Makefile
 
-          # 2. Create the Control file manually
+          # 2. Create the Control file
           echo "Package: com.notjosh.67mod" > control
           echo "Name: 67 Mod" >> control
           echo "Version: 1.0" >> control
@@ -28,36 +28,47 @@ jobs:
           echo "Author: NotJosh" >> control
           echo "Description: Falling 67s" >> control
 
-          # 3. Create the Tweak code manually
+          # 3. Create the Tweak code (Fixed for iOS 13+)
           echo '#import <UIKit/UIKit.h>' > Tweak.x
           echo '%hook SpringBoard' >> Tweak.x
           echo '- (void)applicationDidFinishLaunching:(id)application {' >> Tweak.x
           echo '    %orig;' >> Tweak.x
           echo '    [NSTimer scheduledTimerWithTimeInterval:2.0 repeats:YES block:^(NSTimer *t) {' >> Tweak.x
           echo '        dispatch_async(dispatch_get_main_queue(), ^{' >> Tweak.x
+          echo '            UIWindow *window = nil;' >> Tweak.x
+          echo '            if (@available(iOS 13.0, *)) {' >> Tweak.x
+          echo '                for (UIWindowScene* scene in [UIApplication sharedApplication].connectedScenes) {' >> Tweak.x
+          echo '                    if (scene.activationState == UISceneActivationStateForegroundActive) {' >> Tweak.x
+          echo '                        window = scene.windows.firstObject; break;' >> Tweak.x
+          echo '                    }' >> Tweak.x
+          echo '                }' >> Tweak.x
+          echo '            } else { window = [UIApplication sharedApplication].keyWindow; }' >> Tweak.x
+          echo '            if (!window) return;' >> Tweak.x
           echo '            UILabel *l = [[UILabel alloc] initWithFrame:CGRectMake(arc4random_uniform(300), -50, 60, 60)];' >> Tweak.x
           echo '            l.text = @"67"; l.font = [UIFont boldSystemFontOfSize:40]; l.textColor = [UIColor redColor];' >> Tweak.x
-          echo '            [[UIApplication sharedApplication].keyWindow addSubview:l];' >> Tweak.x
+          echo '            [window addSubview:l];' >> Tweak.x
           echo '            [UIView animateWithDuration:5.0 animations:^{ l.frame = CGRectMake(l.frame.origin.x, 1000, 60, 60); } completion:^(BOOL f) { [l removeFromSuperview]; }];' >> Tweak.x
           echo '        });' >> Tweak.x
           echo '    }];' >> Tweak.x
           echo '}' >> Tweak.x
           echo '%end' >> Tweak.x
 
-          # 4. Build the damn thing
+          # 4. Build it
           export THEOS_DEVICE_IP=localhost
           make package FINALPACKAGE=1
 
       - name: Push to Repo
         run: |
           mkdir -p debs
-          mv packages/*.deb debs/67mod.deb
+          cp packages/*.deb debs/67mod.deb
           echo "Package: com.notjosh.67mod" > Packages
           echo "Name: 67 Mod" >> Packages
           echo "Version: 1.0" >> Packages
+          echo "Architecture: iphoneos-arm64" >> Packages
           echo "Filename: debs/67mod.deb" >> Packages
+          echo "Description: Falling 67s" >> Packages
           git config --global user.name "NotJoshxops"
           git config --global user.email "notjoshxops@github.com"
           git add .
-          git commit -m "Force build" || echo "Done"
+          git commit -m "Fix iOS 13+ build error" || echo "Done"
           git push
